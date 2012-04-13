@@ -301,7 +301,6 @@ module ActionDispatch
           r.translate Rails.application.routes
         end
 
-
         def i18n *locales
           RouteTranslator.init_with_i18n(*locales).translate Rails.application.routes
         end
