@@ -1,4 +1,3 @@
-
 # This class knows nothing
 # about Rails.root or Rails.application.routes, and therefor is easier to
 # test without an Rails App.
@@ -36,6 +35,21 @@ class RouteTranslator
     default_locale == locale.to_s
   end
 
+  def prefix_on_default_locale
+    @prefix_on_default_locale ||= I18n.default_locale.to_s
+  end
+
+  def prefix_on_default_locale= locale
+    @prefix_on_default_locale = locale.to_s
+  end
+
+  def no_prefixes
+    @no_prefixes ||= false
+  end
+
+  def no_prefixes= no_prefixes
+    @no_prefixes = no_prefixes
+  end
 
   class << self
     # Default locale suffix generator
@@ -214,8 +228,15 @@ class RouteTranslator
 
     # Add prefix for all non-default locales
     def add_prefix? locale
-      !default_locale?(locale)
+      if @no_prefixes
+        false
+      elsif !default_locale?(locale) || @prefix_on_default_locale
+        true
+      else
+        false
+      end
     end
+
 
     # Translates a path and adds the locale prefix.
     def translate_path path, locale
@@ -272,10 +293,14 @@ module ActionDispatch
           RouteTranslator.init_with_yield(&block).translate Rails.application.routes
         end
 
-        def translate_from_file *file_path
+        def translate_from_file(file_path, options = {})
           file_path = %w(config locales routes.yml) if file_path.blank?
-          RouteTranslator.init_from_file(File.join(Rails.root, *file_path)).translate Rails.application.routes
+          r = RouteTranslator.init_from_file(File.join(Rails.root, file_path))
+          r.prefix_on_default_locale = true if options && options[:prefix_on_default_locale] == true
+          r.no_prefixes = true if options && options[:no_prefixes] == true
+          r.translate Rails.application.routes
         end
+
 
         def i18n *locales
           RouteTranslator.init_with_i18n(*locales).translate Rails.application.routes
